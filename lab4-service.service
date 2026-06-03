@@ -1,0 +1,14 @@
+[Unit]
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/lab4-service
+ExecStart=/opt/lab4-service/service.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
