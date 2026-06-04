@@ -1,0 +1,79 @@
+---
+- name: deploy Lab4 hhtp service
+  hosts: lab4
+  become: yes
+  vars:
+    service_name: lab4-service
+    service_port: 8000
+    student_name: egor
+
+  tasks:
+    - name: install curl and python
+      apt:
+        name:
+          - curl
+          - python3
+        state: present
+        update_cache: yes
+
+    - name: create service directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+      loop:
+        - /opt/lab4-service
+        - /opt/lab4-service/html
+
+    - name: create index.html
+      copy:
+        content: "<h1>EGOR Lab4 service</h1>\n"
+        dest: /opt/lab4-service/html/index.html
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    - name: deploy service.sh script
+      copy:
+        src: service.sh
+        dest: /opt/lab4-service/service.sh
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    - name: deploy systemd unit file
+      copy:
+        src: lab4-service.service
+        dest: /etc/systemd/system/{{ service_name }}.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify: reload systemd
+
+    - name: enable and start service
+      systemd:
+        name: "{{ service_name }}"
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: healthcheck!
+      uri:
+        url: "http://127.0.0.1:8000/"
+        return_content: yes
+        status_code: 200
+      register: healthcheck_result
+      retries: 5
+      delay: 3
+      until: healthcheck_result.status == 200
+
+    - name: healthcheck result
+      debug:
+        msg: "service is healthy"
